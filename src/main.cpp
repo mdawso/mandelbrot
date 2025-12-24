@@ -17,6 +17,12 @@ constexpr double VIEW_MIN_Y = -1.0;
 constexpr double VIEW_MAX_Y = 1.0;
 constexpr int MAX_ITERATIONS = 25;
 
+Complex map_pixel_to_complex(const int x, const int y) {
+    double real = VIEW_MIN_X + (double)x / WINDOW_X * (VIEW_MAX_X - VIEW_MIN_X);
+    double imaginary = VIEW_MAX_Y - (double)y / WINDOW_Y * (VIEW_MAX_Y - VIEW_MIN_Y);
+    return Complex(real, imaginary);
+}
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
     SDL_SetAppMetadata("mandelbrot", "1.0", "com.mias.mandelbrot");
@@ -33,12 +39,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_SetRenderLogicalPresentation(renderer, WINDOW_X, WINDOW_Y, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
     return SDL_APP_CONTINUE;
-}
-
-Complex map_pixel_to_complex(const int x, const int y) {
-    double real = VIEW_MIN_X + (double)x / WINDOW_X * (VIEW_MAX_X - VIEW_MIN_X);
-    double imaginary = VIEW_MAX_Y - (double)y / WINDOW_Y * (VIEW_MAX_Y - VIEW_MIN_Y);
-    return Complex(real, imaginary);
 }
 
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
