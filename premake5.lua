@@ -4,6 +4,7 @@ configurations { "Debug", "Release" }
 project "Mandelbrot"
 kind "ConsoleApp"
 language "C++"
+cppdialect "C++23"
 targetdir "bin/%{cfg.buildcfg}"
 
 files { "src/**.hpp", "src/**.cpp" }
