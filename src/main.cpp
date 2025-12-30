@@ -30,10 +30,37 @@ struct State {
     SDL_Texture* mandelbrot_texture;
 };
 
+struct Vector2i {
+    int x;
+    int y;
+};
+
 Complex map_pixel_to_complex(const int x, const int y, WindowBounds* bounds) {
     double real = bounds->view_min_x + (double)x / bounds->win_x * (bounds->view_max_x - bounds->view_min_x);
     double imaginary = bounds->view_max_y - (double)y / bounds->win_y * (bounds->view_max_y - bounds->view_min_y);
     return Complex(real, imaginary);
+}
+
+Vector2i map_complex_to_pixel(Complex c, WindowBounds* bounds) {
+    int x = static_cast<int>((std::real(c) - bounds->view_min_x) / (bounds->view_max_x - bounds->view_min_x) * bounds->win_x);
+    int y = static_cast<int>((bounds->view_max_y - std::imag(c)) / (bounds->view_max_y - bounds->view_min_y) * bounds->win_y);
+    return Vector2i{x, y};
+}
+
+void zoom(WindowBounds* bounds, Vector2i centre_pixel, double amount) {
+    double centre_x = bounds->view_min_x + (double)centre_pixel.x / bounds->win_x * (bounds->view_max_x - bounds->view_min_x);
+    double centre_y = bounds->view_max_y - (double)centre_pixel.y / bounds->win_y * (bounds->view_max_y - bounds->view_min_y);
+
+    double width = bounds->view_max_x - bounds->view_min_x;
+    double height = bounds->view_max_y - bounds->view_min_y;
+
+    double new_width = width / amount;
+    double new_height = height / amount;
+
+    bounds->view_min_x = centre_x - new_width / 2.0;
+    bounds->view_max_x = centre_x + new_width / 2.0;
+    bounds->view_min_y = centre_y - new_height / 2.0;
+    bounds->view_max_y = centre_y + new_height / 2.0;
 }
 
 int diverges(const Complex& c, int max_iterations) {
@@ -139,7 +166,9 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 
     SDL_SetRenderDrawColor(state->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(state->renderer);
-
+    
+    constexpr Complex zoom_point = Complex(-0.743643887037151, 0.13182590420533);
+    zoom(state->bounds, map_complex_to_pixel(zoom_point, state->bounds), 1.1);
     recalculate_mandelbrot_texture(state, 100, 16);
 
     SDL_RenderTexture(state->renderer, state->mandelbrot_texture, NULL, NULL);
