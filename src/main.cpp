@@ -47,19 +47,34 @@ int diverges(const Complex& c, int max_iterations) {
     return max_iterations;
 }
 
-void recalculate_mandelbrot_texture(State* state, int max_iterations) {
+void recalculate_mandelbrot_texture(State* state, int max_iterations, int num_threads) {
+
     size_t buffer_size = state->bounds->win_x * state->bounds->win_y;
     std::vector<SDL_Color> pixel_buffer(buffer_size);
 
     constexpr SDL_Color BLACK = {0,0,0,255};
 
-    for (int i = 0; i < buffer_size; i++) {
-        int x = i % state->bounds->win_x;
-        int y = i / state->bounds->win_x;
-        Complex c = map_pixel_to_complex(x, y, state->bounds);
-        int d = diverges(c, max_iterations);
-        unsigned char r = (d * 255) / max_iterations;
-        pixel_buffer[i] = {r, 0, 0, 255};
+    std::vector<std::thread> workers;
+    std::atomic<size_t> next_pixel(0);
+
+    auto worker = [&]() {
+        size_t i;
+        while ((i = next_pixel.fetch_add(1)) < buffer_size) {
+            int x = i % state->bounds->win_x;
+            int y = i / state->bounds->win_x;
+            Complex c = map_pixel_to_complex(x, y, state->bounds);
+            int d = diverges(c, max_iterations);
+            unsigned char r = (d * 255) / max_iterations;
+            pixel_buffer[i] = {r, 0, 0, 255};
+        }
+    };
+
+    for (int t = 0; t < num_threads; ++t) {
+        workers.emplace_back(worker);
+    }
+
+    for (auto& thread : workers) {
+        thread.join();
     }
 
     SDL_UpdateTexture(state->mandelbrot_texture, NULL, pixel_buffer.data(), state->bounds->win_x * sizeof(SDL_Color));
@@ -106,9 +121,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
         return SDL_APP_FAILURE;
     }
 
-    constexpr int max_iters = 250;
-    recalculate_mandelbrot_texture(state, max_iters);
-
     return SDL_APP_CONTINUE;
 }
 
@@ -127,6 +139,8 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 
     SDL_SetRenderDrawColor(state->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(state->renderer);
+
+    recalculate_mandelbrot_texture(state, 100, 16);
 
     SDL_RenderTexture(state->renderer, state->mandelbrot_texture, NULL, NULL);
 
