@@ -28,6 +28,7 @@ struct State {
     SDL_Window* window;
     SDL_Renderer* renderer;
     SDL_Texture* mandelbrot_texture;
+    int frame;
 };
 
 struct Vector2i {
@@ -105,6 +106,18 @@ void recalculate_mandelbrot_texture(State* state, int max_iterations, int num_th
     }
 
     SDL_UpdateTexture(state->mandelbrot_texture, NULL, pixel_buffer.data(), state->bounds->win_x * sizeof(SDL_Color));
+
+    #if 0
+    std::string filename = "frame_" + std::to_string(state->frame) + ".bmp";
+    SDL_Surface* surface = SDL_CreateSurfaceFrom(state->bounds->win_x, state->bounds->win_y, SDL_PIXELFORMAT_RGBA32, pixel_buffer.data(), state->bounds->win_x * sizeof(SDL_Color));
+    if (surface) {
+        SDL_RenderReadPixels(state->renderer, NULL);
+        SDL_SaveBMP(surface, filename.c_str());
+        SDL_DestroySurface(surface);
+    } else {
+        SDL_Log("Failed to create surface for saving frame: %s", SDL_GetError());
+    }
+    #endif
 }
 
 
@@ -163,17 +176,19 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 {
 
     State* state = static_cast<State*>(appstate);
+    state->frame++;
 
     SDL_SetRenderDrawColor(state->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(state->renderer);
     
     constexpr Complex zoom_point = Complex(-0.743643887037151, 0.13182590420533);
-    zoom(state->bounds, map_complex_to_pixel(zoom_point, state->bounds), 1.1);
+    zoom(state->bounds, map_complex_to_pixel(zoom_point, state->bounds), 1.05);
     recalculate_mandelbrot_texture(state, 100, 16);
 
     SDL_RenderTexture(state->renderer, state->mandelbrot_texture, NULL, NULL);
 
     SDL_RenderPresent(state->renderer);
+
     return SDL_APP_CONTINUE;
 }
 
